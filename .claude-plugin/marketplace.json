@@ -1,0 +1,18 @@
+{
+  "name": "claude-excalidraw-diagram",
+  "owner": {
+    "name": "nocetfy"
+  },
+  "plugins": [
+    {
+      "name": "excalidraw-diagram",
+      "source": "./",
+      "description": "画技术图：流程图、架构图、时序图等，输出 PNG 和可编辑的 .excalidraw，干净的非手绘风格，本地渲染并自动检查重叠和穿线",
+      "category": "productivity",
+      "tags": ["diagram", "excalidraw", "flowchart", "architecture", "sequence"]
+    }
+  ],
+  "metadata": {
+    "description": "Clean Excalidraw technical diagrams for Claude Code"
+  }
+}

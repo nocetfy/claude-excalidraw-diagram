@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #ffffff; }
+    #root { display: inline-block; }
+    #root svg { display: block; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    // Pinned: unpinned "@excalidraw/excalidraw?bundle" 404s on @braintree/sanitize-url@6 (2026-10).
+    import {
+      convertToExcalidrawElements, exportToSvg, serializeAsJSON, restoreElements,
+    } from "https://esm.sh/@excalidraw/excalidraw@0.18.1?bundle&deps=@braintree/sanitize-url@7.1.1";
+
+    const SHAPES = new Set(["rectangle", "ellipse", "diamond"]);
+    const box = (e) => ({ x1: e.x, y1: e.y, x2: e.x + e.width, y2: e.y + e.height });
+    const inside = (a, b, t = 0) => a.x1 >= b.x1 - t && a.y1 >= b.y1 - t && a.x2 <= b.x2 + t && a.y2 <= b.y2 + t;
+    const overlap = (a, b, t = 0) => a.x1 < b.x2 - t && b.x1 < a.x2 - t && a.y1 < b.y2 - t && b.y1 < a.y2 - t;
+    const near = (p, b, t) => p[0] >= b.x1 - t && p[0] <= b.x2 + t && p[1] >= b.y1 - t && p[1] <= b.y2 + t;
+    const segHitsBox = (p, q, b) => {  // Liang-Barsky clip of segment p→q against box b
+      let t0 = 0, t1 = 1; const dx = q[0] - p[0], dy = q[1] - p[1];
+      for (const [pp, qq] of [[-dx, p[0] - b.x1], [dx, b.x2 - p[0]], [-dy, p[1] - b.y1], [dy, b.y2 - p[1]]]) {
+        if (pp === 0) { if (qq < 0) return false; continue; }
+        const r = qq / pp;
+        if (pp < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; }
+      }
+      return t1 - t0 > 1e-6;
+    };
+    const shrink = (b, d) => ({ x1: b.x1 + d, y1: b.y1 + d, x2: b.x2 - d, y2: b.y2 - d });
+
+    // Geometry lint: catches the defects that are easy to miss when eyeballing a PNG.
+    function lint(elements, requested) {
+      const issues = [];
+      const live = elements.filter((e) => !e.isDeleted);
+      const byId = new Map(live.map((e) => [e.id, e]));
+      const shapes = live.filter((e) => SHAPES.has(e.type));
+      // Boundaries/frames are not nodes: customData.role "group"/"frame", dashed transparent boxes,
+      // or any shape that fully contains another shape.
+      const isGroup = (g) => ["group", "frame"].includes(g.customData?.role)
+        || (g.strokeStyle === "dashed" && g.backgroundColor === "transparent")
+        || shapes.some((s) => s !== g && inside(box(s), box(g)));
+      const groups = new Set(shapes.filter(isGroup).map((g) => g.id));
+      const nodes = shapes.filter((s) => !groups.has(s.id));
+      const name = (e) => {
+        const t = e.boundElements?.map((b) => byId.get(b.id)).find((x) => x?.type === "text");
+        return t ? `${e.id}「${t.text.replace(/\n/g, " ")}」` : e.id;
+      };
+      for (const e of shapes) {
+        const r = requested.get(e.id);
+        if (r && (Math.abs(r.width - e.width) > 1 || Math.abs(r.height - e.height) > 1))
+          issues.push(`resized: ${name(e)} grew from ${r.width}x${r.height} to ${Math.round(e.width)}x${Math.round(e.height)} to fit its label — enlarge it in the source and re-check spacing`);
+      }
+      for (let i = 0; i < nodes.length; i++)
+        for (let j = i + 1; j < nodes.length; j++)
+          if (overlap(box(nodes[i]), box(nodes[j]), 1)) issues.push(`overlap: ${name(nodes[i])} and ${name(nodes[j])}`);
+      for (const g of shapes.filter((s) => groups.has(s.id)))
+        for (const n of nodes)
+          if (overlap(box(n), box(g)) && !inside(box(n), box(g))) issues.push(`straddles boundary: ${name(n)} crosses the edge of group ${name(g)}`);
+      for (const a of live.filter((e) => e.type === "arrow" || e.type === "line")) {
+        const pts = a.points.map(([px, py]) => [a.x + px, a.y + py]);
+        const ends = new Set([a.startBinding?.elementId, a.endBinding?.elementId].filter(Boolean));
+        for (const n of nodes) {
+          if (near(pts[0], box(n), 6) || near(pts[pts.length - 1], box(n), 6)) ends.add(n.id);
+        }
+        for (const n of nodes) {
+          if (ends.has(n.id)) continue;
+          const b = shrink(box(n), 2);
+          if (pts.some((p, k) => k > 0 && segHitsBox(pts[k - 1], p, b))) issues.push(`arrow through node: ${a.id} passes through ${name(n)}`);
+        }
+        for (let k = 1; k < pts.length; k++) {
+          const [p, q] = [pts[k - 1], pts[k]];
+          if (Math.abs(p[0] - q[0]) > 1 && Math.abs(p[1] - q[1]) > 1) { issues.push(`diagonal: ${a.id} segment ${k} is not horizontal/vertical`); break; }
+        }
+        const label = a.boundElements?.map((b) => byId.get(b.id)).find((x) => x?.type === "text");
+        if (label) {
+          const lb = box(label);
+          for (const n of nodes) if (overlap(lb, box(n), 1)) issues.push(`label collision: label「${label.text}」of ${a.id} overlaps ${name(n)} — lengthen that arrow segment`);
+        }
+      }
+      return issues;
+    }
+
+    window.renderScene = async function (input) {
+      try {
+        let elements, files = {};
+        const requested = new Map();
+        if (input && input.type === "excalidraw") {
+          elements = restoreElements(input.elements || [], null, { repairBindings: true });
+          files = input.files || {};
+        } else {
+          const skeleton = Array.isArray(input) ? input : input.elements;
+          for (const s of skeleton) if (s.id && SHAPES.has(s.type) && s.width && s.height) requested.set(s.id, { width: s.width, height: s.height });
+          elements = convertToExcalidrawElements(skeleton, { regenerateIds: false });
+        }
+        const appState = { exportBackground: true, exportScale: 1, viewBackgroundColor: "#ffffff" };
+        const svg = await exportToSvg({ elements, appState, files, exportPadding: 32 });
+        const root = document.getElementById("root");
+        root.innerHTML = "";
+        root.appendChild(svg);
+        return {
+          ok: true,
+          issues: lint(elements, requested),
+          excalidraw: serializeAsJSON(elements, { viewBackgroundColor: "#ffffff" }, files, "local"),
+          svg: svg.outerHTML,
+        };
+      } catch (err) {
+        return { ok: false, error: String(err && err.stack || err) };
+      }
+    };
+    window.__moduleReady = true;
+  </script>
+</body>
+</html>
