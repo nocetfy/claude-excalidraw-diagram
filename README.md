@@ -26,17 +26,18 @@ If Node.js and Chrome are already installed, the plugin alone installs with:
 
 | Dependency | macOS (Homebrew) | Debian, Ubuntu | Arch |
 | --- | --- | --- | --- |
-| Node.js 18+ | `node` | `nodejs npm` | `nodejs npm` |
+| Node.js 20+ | `node` | `nodejs npm` | `nodejs npm` |
 | Browser | `google-chrome` | `chromium` | `chromium` |
 | Chinese font | PingFang, built in | `fonts-noto-cjk` | `noto-fonts-cjk` |
 
-- It checks that esm.sh is reachable: the renderer loads Excalidraw from it. Behind a firewall, set a proxy.
 - It adds the marketplace `claude-excalidraw-diagram` and installs the plugin `excalidraw-diagram`.
 - It moves an existing `~/.claude/skills/excalidraw-diagram` to `~/.claude/skills-backup/`, so that two skills of the same name do not clash.
 - On Linux with Chromium, it writes `CHROME_PATH` into the `env` block of `~/.claude/settings.json`.
-- Last, it renders the example flowchart, which also installs the one npm dependency, playwright-core, to prove the whole chain works.
+- Last, it renders the example flowchart. On first use, the renderer installs the dependencies pinned in `package-lock.json` from npm and builds a local Excalidraw bundle with its fonts. Subsequent renders work offline, without a CDN.
 
 To only check what is missing, without changing anything: `./install.sh --check`. For the other options: `./install.sh --help`.
+
+To prepare and test this checkout without changing Claude Code plugins or system software, run `./install.sh --skip-plugin --skip-deps`.
 
 ### Instructions for an agent
 
@@ -49,7 +50,7 @@ To only check what is missing, without changing anything: `./install.sh --check`
 
 - **Style.** Conventional technical diagrams: semantic colours, straight horizontal and vertical connectors, Helvetica, and steady lines rather than a hand-drawn look.
 - **Input format.** The model writes a skeleton file (`.skel.json`). Excalidraw measures the text and centres the labels itself, so Chinese text does not overflow.
-- **Renderer.** Node.js with `playwright-core`, driving the Google Chrome already on the machine, so no browser download. Excalidraw loads from esm.sh, at a pinned version.
+- **Renderer.** Node.js with `playwright-core`, driving the Google Chrome already on the machine, so no browser download. Excalidraw, React and the bundled fonts load locally. The npm lockfile fixes the dependency versions, and esbuild produces the browser bundle during setup.
 - **Automatic checks.** Each render checks for overlapping nodes, connectors through nodes, diagonal lines, colliding labels, nodes outside their group, and shapes stretched by their text.
 - **Manual edits are kept.** A `.excalidraw` file edited in Excalidraw is not overwritten from the skeleton, unless you pass `--force`.
 
@@ -59,6 +60,8 @@ To only check what is missing, without changing anything: `./install.sh --check`
 bash skills/excalidraw-diagram/references/render.sh path/to/diagram.skel.json [--svg] [--scale 2] [--force]
 bash skills/excalidraw-diagram/references/render.sh path/to/diagram.excalidraw
 ```
+
+The first run needs access to npm to prepare dependencies. To prepare them ahead of time, run `npm run setup` in `skills/excalidraw-diagram/references`. Generated assets are stored under `vendor/`; they are built locally and are not committed to the repository. Keep this directory and `node_modules/` for offline use. A plugin update that replaces these directories will require setup again.
 
 ## Requirements
 

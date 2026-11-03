@@ -75,7 +75,7 @@ description: 画技术图：流程图、架构图、时序图、数据流、状�
 
 ## 环境
 
-- 渲染使用本机 Google Chrome（也可以用环境变量 `CHROME_PATH` 指定浏览器），并且需要能访问 esm.sh 来加载 Excalidraw。
-- `render.sh` 首次运行时会自动 `npm install` 唯一的依赖 playwright-core，需要 Node.js 18 以上。
+- 渲染使用本机 Google Chrome（也可以用环境变量 `CHROME_PATH` 指定浏览器），JavaScript 和字体均从本地加载，渲染期间不依赖 CDN 或网络。
+- `render.sh` 首次运行时会按锁文件执行 `npm ci` 安装依赖并构建本地资源，需要 Node.js 20 及以上和 npm registry 网络连接。后续直接离线渲染；也可提前在 `references/` 运行 `npm run setup`。插件更新后可能需要重新准备依赖。
 - 中文用系统字体：macOS 自带苹方；Linux 需要装 Noto Sans CJK（如 `fonts-noto-cjk`），否则中文显示为方框。
 - 渲染失败时，运行 `bash "${CLAUDE_SKILL_DIR}/../../install.sh" --check` 查看缺什么。

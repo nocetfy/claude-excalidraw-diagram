@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the excalidraw-diagram plugin of this repository and everything it needs: Node.js 18+,
+# Installs the excalidraw-diagram plugin of this repository and everything it needs: Node.js 20+,
 # Google Chrome (or Chromium), and a Chinese font on Linux. Then it adds this repository as a plugin
 # marketplace, installs the plugin, and renders the example flowchart to prove the setup works.
 #
@@ -8,7 +8,7 @@
 #   --source <src>     marketplace source for `claude plugin marketplace add`
 #                      (default: this clone's GitHub origin, else this folder)
 #   --skip-deps        do not install system software
-#   --skip-plugin      do not touch Claude Code plugins or settings
+#   --skip-plugin      do not touch Claude Code plugins or settings; test this checkout
 #   -h, --help
 #
 # It is safe to run again. It runs without a terminal (from an agent): a command that needs root
@@ -79,7 +79,7 @@ find_chrome() {
   return 1
 }
 
-node_ok() { have node && have npm && (($(node -p 'process.versions.node.split(".")[0]') >= 18)); }
+node_ok() { have node && have npm && (($(node -p 'process.versions.node.split(".")[0]') >= 20)); }
 
 # macOS has PingFang; Linux needs a font that fontconfig lists for Chinese.
 cjk_font_ok() {
@@ -89,7 +89,7 @@ cjk_font_ok() {
 
 report() {
   local need=0
-  if node_ok; then ok "node $(node -v)"; else warn 'Node.js 18+ with npm missing'; need=1; fi
+  if node_ok; then ok "node $(node -v)"; else warn 'Node.js 20+ with npm missing'; need=1; fi
   if find_chrome; then ok "chrome ${chrome_path:-(Google Chrome)}"; else warn 'Chrome/Chromium missing'; need=1; fi
   if cjk_font_ok; then ok 'Chinese font'; else warn 'no Chinese font (fc-list :lang=zh is empty)'; need=1; fi
   return $need
@@ -99,11 +99,6 @@ install_deps() {
   say 'Node.js, Chrome, Chinese font'
   local need=0
   report || need=1
-  if have curl; then
-    if curl -fsS -o /dev/null --max-time 20 'https://esm.sh/@excalidraw/excalidraw@0.18.1'; then ok 'esm.sh reachable'
-    else warn 'esm.sh not reachable; the renderer loads Excalidraw from it (check the proxy)'
-    fi
-  fi
   ((need && !check)) || return 0
   case $pm in
     brew)
@@ -126,7 +121,7 @@ install_deps() {
     *) ;;
   esac
   hash -r
-  node_ok || bad 'Node.js 18+ still missing: see https://nodejs.org/en/download'
+  node_ok || bad 'Node.js 20+ still missing: see https://nodejs.org/en/download'
   find_chrome || bad 'Chrome still missing: install it from https://www.google.com/chrome/'
   cjk_font_ok || bad 'Chinese font still missing: install Noto Sans CJK'
   return 0
@@ -202,13 +197,16 @@ install_plugin() {
   return 0
 }
 
-# Renders the example, which also installs playwright-core into the installed plugin.
+# Renders the example, preparing locked npm dependencies and local assets on first use.
 verify() {
   say 'Test render'
   local tmp root out
   tmp=$(mktemp -d)
-  root=$(plugin_path "$ID")
-  [[ -n $root ]] || root=$here
+  root=$here
+  if ((!skip_plugin)); then
+    root=$(plugin_path "$ID")
+    [[ -n $root ]] || root=$here
+  fi
   local refs=$root/skills/excalidraw-diagram/references
   cp "$refs/example-flowchart.skel.json" "$tmp/"
   find_chrome || true

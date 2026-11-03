@@ -1,2 +1,4 @@
 node_modules/
+skills/excalidraw-diagram/references/vendor/
+skills/excalidraw-diagram/references/.vendor-*/
 .DS_Store

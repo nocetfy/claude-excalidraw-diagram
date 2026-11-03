@@ -2,7 +2,21 @@
   "name": "excalidraw-diagram-renderer",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "node setup.mjs",
+    "test": "node --test offline.test.mjs"
+  },
   "dependencies": {
-    "playwright-core": "^1.64.0"
+    "@excalidraw/excalidraw": "0.18.1",
+    "esbuild": "0.25.12",
+    "playwright-core": "1.64.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "overrides": {
+    "@braintree/sanitize-url": "7.1.1"
   }
 }

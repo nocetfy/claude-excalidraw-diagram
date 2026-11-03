@@ -4,11 +4,10 @@
 // A skeleton writes <name>.excalidraw next to it; that file is never overwritten once edited in Excalidraw (unless --force).
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, dirname, basename, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { chromium } from "playwright-core";
+import { openLocalPage } from "./local-page.mjs";
 
-const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const opt = (name, dflt) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : dflt; };
 const input = args.find((a, i) => !a.startsWith("--") && !["--out", "--scale"].includes(args[i - 1]));
@@ -43,17 +42,13 @@ catch (e) {
   console.error(e.message.split("\n")[0]);
   process.exit(1);
 }
-const problems = [];
 try {
-  const page = await (await browser.newContext({ deviceScaleFactor: scale })).newPage();
-  page.on("response", (r) => { if (r.status() >= 400) problems.push(`HTTP ${r.status()} ${r.url()}`); });
-  page.on("pageerror", (e) => problems.push(`page error: ${e.message}`));
-  await page.goto(pathToFileURL(join(here, "render_template.html")).href);
-  const ready = await page.waitForFunction(() => window.__moduleReady === true, null, { timeout: 60000 }).then(() => true, () => false);
-  if (!ready) throw new Error(`Excalidraw failed to load from esm.sh (network or CDN problem).\n  ${problems.join("\n  ")}`);
+  const { page, problems } = await openLocalPage(browser, scale);
 
   const res = await page.evaluate((d) => window.renderScene(d), data);
   if (!res.ok) throw new Error(`render failed: ${res.error}`);
+  await page.evaluate(() => document.fonts.ready);
+  if (problems.length) throw new Error(`Local resource loading failed:\n  ${problems.join("\n  ")}`);
   await (await page.$("#root svg")).screenshot({ path: pngPath, omitBackground: false });
 
   const written = [pngPath];

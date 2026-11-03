@@ -26,17 +26,18 @@ cd claude-excalidraw-diagram
 
 | 依赖 | macOS（Homebrew） | Debian / Ubuntu | Arch |
 | --- | --- | --- | --- |
-| Node.js 18+ | `node` | `nodejs npm` | `nodejs npm` |
+| Node.js 20+ | `node` | `nodejs npm` | `nodejs npm` |
 | 浏览器 | `google-chrome` | `chromium` | `chromium` |
 | 中文字体 | 系统自带苹方 | `fonts-noto-cjk` | `noto-fonts-cjk` |
 
-- 检查能否访问 esm.sh（渲染时从那里加载 Excalidraw），访问不了要配代理。
 - 添加 marketplace `claude-excalidraw-diagram`，安装插件 `excalidraw-diagram`。
 - 已有 `~/.claude/skills/excalidraw-diagram` 的，挪到 `~/.claude/skills-backup/`，避免同名 skill 冲突。
 - Linux 上用的是 Chromium 时，在 `~/.claude/settings.json` 的 `env` 里写 `CHROME_PATH`。
-- 最后渲染样例流程图（同时自动安装唯一的 npm 依赖 playwright-core），验证整条链路。
+- 最后渲染样例流程图。首次运行会按 `package-lock.json` 从 npm 安装固定版本的依赖，并构建本地 Excalidraw 代码包及字体；之后可离线渲染，无需 CDN。
 
 只检查不改动：`./install.sh --check`。其他选项：`./install.sh --help`。
+
+只准备并验证当前代码库，不修改 Claude Code 插件或系统软件：`./install.sh --skip-plugin --skip-deps`。
 
 ### 给 agent 的安装说明
 
@@ -49,7 +50,7 @@ cd claude-excalidraw-diagram
 
 - **风格**：常规技术图，语义配色、横平竖直的连线、Helvetica 字体、线条不抖，不是手绘风。
 - **输入格式**：AI 写骨架文件（`.skel.json`），由 Excalidraw 自己测量文字、居中标签，中文不会溢出。
-- **渲染器**：Node + `playwright-core`，直接用本机的 Google Chrome，不用另外下载浏览器。Excalidraw 从 esm.sh 加载，版本固定。
+- **渲染器**：Node + `playwright-core`，直接用本机的 Google Chrome，不用另外下载浏览器。Excalidraw、React 和附带字体均从本地加载；npm 锁文件固定依赖版本，准备阶段使用 esbuild 生成浏览器代码包。
 - **自动检查**：渲染时检查节点重叠、连线穿过节点、斜线、标签碰撞、节点跨出分组边界、形状被文字撑大。
 - **保护手动修改**：在 Excalidraw 里改过的 `.excalidraw` 不会被骨架覆盖，除非加 `--force`。
 
@@ -59,6 +60,8 @@ cd claude-excalidraw-diagram
 bash skills/excalidraw-diagram/references/render.sh path/to/diagram.skel.json [--svg] [--scale 2] [--force]
 bash skills/excalidraw-diagram/references/render.sh path/to/diagram.excalidraw
 ```
+
+首次运行需要访问 npm 下载依赖。也可以提前在 `skills/excalidraw-diagram/references` 目录执行 `npm run setup`。生成的资源放在 `vendor/`，由本机构建，不提交到代码库；保留该目录和 `node_modules/` 即可离线使用。插件更新若替换了这些目录，需要重新准备一次。
 
 ## 要求
 
