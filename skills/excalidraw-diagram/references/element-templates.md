@@ -12,14 +12,15 @@
 - `id`：唯一且有含义，例如 `order_tx`。连线以 `e_` 开头，例如 `e_tx_fail`。
 - `x`、`y` 是左上角坐标，取 10 的倍数。
 - 颜色、字号一律按 color-palette.md。
+- 形状里的 `label` 一定要写 `strokeColor`。不写的话，文字会跟着形状的框变成灰色。
 - 数组顺序就是绘制顺序：先放分组框，再放节点，最后放连线。
 
 ## 节点
 
-普通步骤：
+普通步骤（默认的中性色）：
 ```json
 {"type": "rectangle", "id": "tx", "x": 360, "y": 430, "width": 180, "height": 64,
- "backgroundColor": "#ffffff", "strokeColor": "#1e1e1e", "fillStyle": "solid", "strokeWidth": 1.5, "roughness": 0,
+ "backgroundColor": "#ffffff", "strokeColor": "#868e96", "fillStyle": "solid", "strokeWidth": 1, "roughness": 0,
  "roundness": {"type": 3},
  "label": {"text": "更新订单状态\nMySQL 事务", "fontSize": 18, "fontFamily": 2, "strokeColor": "#1e1e1e"}}
 ```
@@ -27,13 +28,21 @@
 判断（菱形不加 `roundness`）：
 ```json
 {"type": "diamond", "id": "tx_ok", "x": 355, "y": 540, "width": 190, "height": 100,
- "backgroundColor": "#fff3bf", "strokeColor": "#e8590c", "fillStyle": "solid", "strokeWidth": 1.5, "roughness": 0,
+ "backgroundColor": "#ffffff", "strokeColor": "#868e96", "fillStyle": "solid", "strokeWidth": 1, "roughness": 0,
  "label": {"text": "写入成功?", "fontSize": 18, "fontFamily": 2, "strokeColor": "#1e1e1e"}}
 ```
 
-入口或外部触发：`"type": "ellipse"`，尺寸 200×64，配 infra 色，其余字段同上。
+入口或外部触发：`"type": "ellipse"`，尺寸 200×64，其余字段同普通步骤。
 
-中间件或存储：rectangle 配 infra 色，标签写实例或 topic，例如 `"Kafka\norder.paid"`。
+中间件或存储：字段同普通步骤，标签写实例或 topic，例如 `"Kafka\norder.paid"`。
+
+需要上色的节点（焦点或对应）：只把 `backgroundColor` 换成该色系的底色，框和文字不变。
+```json
+{"type": "rectangle", "id": "retry", "x": 360, "y": 690, "width": 180, "height": 64,
+ "backgroundColor": "#ffe3e3", "strokeColor": "#868e96", "fillStyle": "solid", "strokeWidth": 1, "roughness": 0,
+ "roundness": {"type": 3},
+ "label": {"text": "重试队列\n指数退避", "fontSize": 18, "fontFamily": 2, "strokeColor": "#1e1e1e"}}
+```
 
 ## 分组框和标题
 
@@ -56,10 +65,10 @@
 - 左：`(x, y + h/2)`
 - 右：`(x + w, y + h/2)`
 
-直线，带标签：
+直线，带标签（默认用 `#495057`；这一条是失败分支，所以用红的字线色）：
 ```json
 {"type": "arrow", "id": "e_tx_fail", "x": 450, "y": 640, "points": [[0, 0], [0, 50]],
- "strokeColor": "#e03131", "strokeWidth": 1.5, "roughness": 0, "endArrowhead": "triangle",
+ "strokeColor": "#a72721", "strokeWidth": 1.5, "roughness": 0, "endArrowhead": "triangle",
  "start": {"id": "tx_ok"}, "end": {"id": "retry"},
  "label": {"text": "失败", "fontSize": 16, "fontFamily": 2, "strokeColor": "#495057"}}
 ```
@@ -81,24 +90,24 @@
 
 ## 时序图元素
 
-参与方：在顶部 `y = 0` 排一行，用领域身份色（见 color-palette.md）。
+参与方：在顶部 `y = 0` 排一行，每个参与方一个对应色（见 color-palette.md 的"取哪个色"），只换底色。
 ```json
 {"type": "rectangle", "id": "p_trade", "x": 610, "y": 0, "width": 260, "height": 60,
- "backgroundColor": "#d0ebff", "strokeColor": "#1971c2", "fillStyle": "solid", "strokeWidth": 1.5, "roughness": 0,
+ "backgroundColor": "#d0ebff", "strokeColor": "#868e96", "fillStyle": "solid", "strokeWidth": 1, "roughness": 0,
  "roundness": {"type": 3},
  "label": {"text": "交易（编排方）", "fontSize": 20, "fontFamily": 2, "strokeColor": "#1e1e1e"}}
 ```
 
-生命线：从参与方框底边中点往下画，用该领域的浅色。
+生命线：从参与方框底边中点往下画，一律用浅灰。
 ```json
 {"type": "line", "id": "life_trade", "x": 740, "y": 60, "points": [[0, 0], [0, 890]],
- "strokeColor": "#74c0fc", "strokeStyle": "dashed", "strokeWidth": 1, "roughness": 0}
+ "strokeColor": "#adb5bd", "strokeStyle": "dashed", "strokeWidth": 1, "roughness": 0}
 ```
 
-消息：水平箭头，从一条生命线画到另一条，不绑定，颜色取发起方的描边色。返回消息加 `"strokeStyle": "dashed"`；异步通知用 `"endArrowhead": "arrow"`。消息之间的纵向间距 ≥ 60。
+消息：水平箭头，从一条生命线画到另一条，不绑定，颜色取发起方的字线色。返回消息加 `"strokeStyle": "dashed"`；异步通知用 `"endArrowhead": "arrow"`。消息之间的纵向间距 ≥ 60。
 ```json
 {"type": "arrow", "id": "e_dispatch", "x": 740, "y": 330, "points": [[0, 0], [440, 0]],
- "strokeColor": "#1971c2", "strokeWidth": 1.5, "roughness": 0, "endArrowhead": "triangle",
+ "strokeColor": "#2a5fb7", "strokeWidth": 1.5, "roughness": 0, "endArrowhead": "triangle",
  "label": {"text": "派单，附第 1 版副本（原样转交）", "fontSize": 16, "fontFamily": 2, "strokeColor": "#343a40"}}
 ```
 

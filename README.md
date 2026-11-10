@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-A Claude Code plugin that draws technical diagrams: flowcharts, architecture diagrams, sequence diagrams, data flows, state machines and call chains. It writes a PNG and an editable `.excalidraw` file, in a clean style that is not hand-drawn, with semantic colours. It renders on your machine and checks the result for overlaps and lines that cross nodes.
+A Claude Code plugin that draws technical diagrams: flowcharts, architecture diagrams, sequence diagrams, data flows, state machines and call chains. It writes a PNG and an editable `.excalidraw` file, in a clean style that is not hand-drawn, neutral by default with colour only on what the diagram is about. It renders on your machine and checks the result for overlaps and lines that cross nodes.
 
 ![Example: a payment callback flowchart](docs/example-flowchart.png)
 
@@ -48,7 +48,7 @@ To prepare and test this checkout without changing Claude Code plugins or system
 
 ## Features
 
-- **Style.** Conventional technical diagrams: semantic colours, straight horizontal and vertical connectors, Helvetica, and steady lines rather than a hand-drawn look.
+- **Style.** Conventional technical diagrams: neutral by default with colour only on what matters, straight horizontal and vertical connectors, Helvetica, and steady lines rather than a hand-drawn look.
 - **Input format.** The model writes a skeleton file (`.skel.json`). Excalidraw measures the text and centres the labels itself, so Chinese text does not overflow.
 - **Renderer.** Node.js with `playwright-core`, driving the Google Chrome already on the machine, so no browser download. Excalidraw, React and the bundled fonts load locally. The npm lockfile fixes the dependency versions, and esbuild produces the browser bundle during setup.
 - **Automatic checks.** Each render checks for overlapping nodes, connectors through nodes, diagonal lines, colliding labels, nodes outside their group, and shapes stretched by their text.

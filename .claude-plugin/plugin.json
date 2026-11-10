@@ -1,6 +1,6 @@
 {
   "name": "excalidraw-diagram",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "画技术图：流程图、架构图、时序图、数据流、状态机、调用链等。输出 PNG 和可编辑的 .excalidraw 文件，干净的非手绘风格，本地渲染并自动检查重叠和穿线",
   "author": {
     "name": "nocetfy"
